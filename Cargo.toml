@@ -1,0 +1,130 @@
+[package]
+name = "h33-substrate-verifier"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+authors = ["H33.ai, Inc. <support@h33.ai>"]
+description = "Reference implementation of the H33 substrate response attestation verifier. Verifies X-H33-Receipt HTTP headers against three post-quantum signature families (Dilithium ML-DSA-65 + FALCON-512 + SPHINCS+-SHA2-128f) over the H33 58-byte substrate primitive. Standalone, no internal H33 dependencies, WASM-target-compatible."
+license = "LicenseRef-Proprietary"
+homepage = "https://h33.ai/substrate"
+repository = "https://github.com/H33ai-postquantum/h33-substrate-verifier"
+documentation = "https://docs.rs/h33-substrate-verifier"
+keywords = ["h33", "post-quantum", "verification", "substrate", "attestation"]
+categories = ["cryptography", "authentication", "wasm"]
+readme = "README.md"
+
+[features]
+# Default: full verification of all three post-quantum families.
+default = ["std", "dilithium", "falcon", "sphincs"]
+
+# `std` pulls in std::error::Error and std-only convenience helpers.
+# Without it, the crate is no_std-compatible for embedded and WASM.
+std = ["thiserror/std", "serde/std", "serde_json/std", "hex/std", "base64/std", "sha3/std"]
+
+# Individual family feature flags — a WASM build that cannot link one of
+# the C reference implementations can disable that family and still verify
+# the other two. Two-of-three verification is still strong: the H33 patent
+# claims explicitly require "two of three families remain secure even if
+# the third is broken."
+dilithium = ["dep:pqcrypto-mldsa"]
+falcon    = ["dep:pqcrypto-falcon"]
+sphincs   = ["dep:pqcrypto-sphincsplus"]
+
+# Convenience helpers for fetching the attested response over HTTP and
+# parsing headers from a reqwest::Response. Pulls in reqwest — not needed
+# for WASM / library-only consumers.
+reqwest-support = ["dep:reqwest"]
+
+[dependencies]
+# Zero-allocation hex decode/encode. Works in no_std.
+hex = { version = "0.4", default-features = false, features = ["alloc"] }
+
+# Base64 for public-key encoding in PublicKeysResponse JSON. Works in no_std.
+base64 = { version = "0.22", default-features = false, features = ["alloc"] }
+
+# SHA3-256 for the substrate signing_message computation. Pure Rust,
+# RustCrypto, works in no_std and WASM.
+sha3 = { version = "0.10", default-features = false }
+
+# serde + serde_json for parsing the PublicKeysResponse JSON document.
+# Both support no_std with alloc.
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+
+# thiserror 2.0 supports no_std via its own `std` feature flag.
+thiserror = { version = "2.0", default-features = false }
+
+# NOTE: this crate intentionally has ZERO internal H33 dependencies.
+# The 58-byte substrate layout and the 42-byte CompactReceipt wire format
+# are reimplemented here directly from the public specification
+# (gitlab.com/drata5764111/h33/h33-substrate/SPEC.md). This proves that
+# any developer can build a verifier from the spec alone — the reference
+# verifier is not a wrapper around private H33 code.
+
+# Post-quantum signature verification — each family is optional behind
+# its own feature flag so WASM builds can disable whichever one does not
+# yet compile cleanly to wasm32.
+pqcrypto-mldsa      = { version = "0.1", optional = true }
+pqcrypto-falcon     = { version = "0.3", optional = true }
+pqcrypto-sphincsplus = { version = "0.7", optional = true }
+pqcrypto-traits     = "0.3"
+
+# Optional: HTTP client convenience layer for the `Verifier::verify_url`
+# helper. Hidden behind `reqwest-support` so library-only consumers do
+# not pull in hyper/tokio.
+reqwest = { version = "0.12", optional = true, default-features = false, features = ["rustls-tls"] }
+
+[dev-dependencies]
+# Property-based testing — generates random inputs to find edge cases
+# the hand-written tests miss.
+proptest = "1.5"
+
+# Criterion for benchmarks. Replaces rustc built-in `test::Bencher`
+# which is unstable.
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# Pretty assertions for clearer failure messages.
+pretty_assertions = "1.4"
+
+# Runtime for tests that use async helpers. Only used inside #[cfg(test)]
+# so WASM builds of the main crate never see it.
+tokio = { version = "1.40", features = ["rt", "macros"] }
+
+[[bench]]
+name = "verify"
+harness = false
+
+[[example]]
+name = "verify_url"
+required-features = ["reqwest-support"]
+
+# Release profile — tight binary size matters because this crate is the
+# reference verifier that every customer will embed. LTO + strip + single
+# codegen unit gets us to ~1 MB for the CLI wrapper.
+[profile.release]
+lto = "fat"
+codegen-units = 1
+strip = true
+opt-level = 3
+
+# Lints — no shortcuts. Every public item must be documented. No unsafe.
+# No unwrap/expect/panic in library code. Pedantic and nursery lints on.
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+unreachable_pub = "warn"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+indexing_slicing = "deny"
+integer_division = "warn"
+float_cmp = "deny"
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+# Intentionally relaxed: these are stylistic and would add noise without value.
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
