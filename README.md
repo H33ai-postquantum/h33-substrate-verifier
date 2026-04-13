@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/h33-substrate-verifier.svg)](https://crates.io/crates/h33-substrate-verifier)
 [![Docs](https://docs.rs/h33-substrate-verifier/badge.svg)](https://docs.rs/h33-substrate-verifier)
-[![License: Proprietary](https://img.shields.io/badge/license-Proprietary-red.svg)](./README.md#license)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 [![no_std](https://img.shields.io/badge/no__std-compatible-blue.svg)](./README.md)
 [![forbid(unsafe_code)](https://img.shields.io/badge/unsafe-forbidden-brightgreen.svg)](./README.md)
 [![Patent pending](https://img.shields.io/badge/patent-pending-yellow.svg)](./README.md#license)
@@ -111,7 +111,9 @@ The four structural checks use only SHA3-256, hex decoding, and byte comparisons
 
 ## License
 
-Proprietary. Commercial use requires a license from H33.ai, Inc. Source is open for research, audit, and reference-implementation purposes.
+Licensed under the Apache License, Version 2.0. See [LICENSE](./LICENSE) for details.
+
+The verifier is open source because verification is a pure function of public data, and because the trustlessness of verification is a defining property of the substrate primitive. Any party may verify any substrate locally, using only public keys and local cryptography, without acquiring a commercial license.
 
 Patent pending — H33 substrate Claims 124-125.
 
