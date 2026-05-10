@@ -54,3 +54,14 @@ MIT
 ## About
 
 Built by [H33.ai](https://h33.ai). 7 patents pending, 250+ claims. Post-quantum cryptographic infrastructure.
+
+## Quick test
+
+The repo includes `vectors.json` with 10 production test vectors (6 valid + 4 adversarial):
+
+```bash
+cargo build --release
+./target/release/h33-74-verifier vectors.json
+```
+
+Expected output: 10 passed, 0 failed.
